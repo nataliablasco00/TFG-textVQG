@@ -3,12 +3,14 @@
 
 import json
 
-import fasttext
+# import fasttext
 import torch
 import torchtext
 import smart_open
 from gensim.models.fasttext import FastText
-#from gensim.models.wrappers import FastText
+# from gensim.models.wrappers import FastText
+from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM
+# from transformers import T5Tokenizer
 
 
 class Vocabulary(object):
@@ -106,15 +108,11 @@ def get_FastText_embedding(name, embed_size, vocab, questions=None):
             FastText word embeddings.
     """
 
-    ft = torchtext.vocab.FastText('en', max_vectors=str(embed_size))
-    #list_vocab = [[v] for v in vocab.idx2word.values()]  # TODO: use full questions
-    """list_questions = []
-    f = open(questions)
-    question = json.load(f)
-    for q in question["data"]:
-        list_questions.append(q["question"].split(" "))
-    f.close()"""
-    #ft = FastText(list_questions, size=embed_size, min_count=1, window=5, sg=1, sample=1, iter=10)
+    ft = torchtext.vocab.FastText('en', max_vectors=embed_size)
+
+    # ft = BertTokenizer.from_pretrained('bert-base-uncased')
+
+    # ft = T5Tokenizer.from_pretrained("t5-small")
 
     vocab_size = len(vocab)
     embedding = torch.zeros(vocab_size, embed_size)
@@ -145,8 +143,6 @@ def process_lengths(inputs, pad=0):
     else:
         lengths = list(max_length - inputs.data.eq(pad).sum(1).squeeze())
     return lengths
-
-
 
 
 
