@@ -11,7 +11,7 @@ import progressbar
 import torch
 
 from models import textVQG
-from nlgeval import NLGEval
+# from nlgeval import NLGEval
 from utils import Dict2Obj
 from utils import Vocabulary
 from utils import get_loader
@@ -33,11 +33,11 @@ def evaluate(textvqg, data_loader, vocab, args, params):
         A float value of average loss.
     """
     textvqg.eval()
-    nlge = NLGEval(no_skipthoughts=True)  # TODO: commented no_FastText=True,
+    # nlge = NLGEval(no_skipthoughts=True, no_FastText=True)
     preds = []
     gts = []
     bar = progressbar.ProgressBar(maxval=len(data_loader)).start()
-    # for iterations, (images, questions, answers, _) in enumerate(data_loader):  TODO: commented
+    # for iterations, (images, questions, answers, _) in enumerate(data_loader):  # TODO: commented
     for iterations, (images, questions, answers, qindices, bbox) in enumerate(data_loader):
         #bbox[bbox!=0] = 0
 
@@ -46,11 +46,12 @@ def evaluate(textvqg, data_loader, vocab, args, params):
             images = images.cuda()
             answers = answers.cuda()
             bbox = bbox.cuda()
+
         alengths = process_lengths(answers)
         # Predict.
         if args.from_answer:
-            outputs = textvqg.predict_from_answer(images, answers, bbox, alengths) # TODO: added bbox
-        
+            outputs = textvqg.predict_from_answer(images, answers, bbox, alengths)  # TODO: added bbox
+
 
         for i in range(images.size(0)):
             output = vocab.tokens_to_words(outputs[i])
@@ -66,8 +67,8 @@ def evaluate(textvqg, data_loader, vocab, args, params):
     print('PREDICTIONS')
     print(preds[:args.num_show])
     print('='*80)
-    scores = nlge.compute_metrics(ref_list=[gts], hyp_list=preds)
-    return scores, gts, preds
+    # scores = nlge.compute_metrics(ref_list=[gts], hyp_list=preds)
+    return None, gts, preds
 
 
 def main(args):
@@ -136,11 +137,11 @@ def main(args):
     textvqg.load_state_dict(torch.load(args.model_path))
 
     # Setup GPUs.
-    
+
     if torch.cuda.is_available():
         logging.info("Using available GPU...")
         textvqg.cuda()
-   
+
 
     scores, gts, preds = evaluate(textvqg, data_loader, vocab, args, params)
 
