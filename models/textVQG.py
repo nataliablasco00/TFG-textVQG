@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from model import Transformer
 
 from .encoder_cnn import EncoderCNN
 from .encoder_rnn import EncoderRNN
@@ -64,21 +65,30 @@ class textVQG(nn.Module):
                                          variable_lengths=True)
 
         # Setup stacked attention to combine image and answer features.
-        self.answer_attention = MLP(2*hidden_size+8, att_ff_size, hidden_size,
+        self.answer_attention = MLP(3*hidden_size, att_ff_size, hidden_size,
                                     num_layers=num_att_layers)
 
         # Setup question decoder.
         self.z_decoder = nn.Linear(z_size, hidden_size)
         self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
                                num_layers=num_att_layers)
-        self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
+        """self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
                                   sos_id=sos_id,
                                   eos_id=eos_id,
                                   n_layers=num_layers,
                                   rnn_cell=rnn_cell,
                                   input_dropout_p=input_dropout_p,
                                   dropout_p=dropout_p,
-                                  embedding=embedding)
+                                  embedding=embedding)"""
+        self.decoder = Transformer(
+            num_tokens=vocab_size,
+            dim_model=128,
+            d_hid=512,
+            num_heads=4, # 16
+            num_layers=3, # 24,
+            dropout_p=0.1,
+            n_positions=max_len
+        )
 
 
 
@@ -202,7 +212,7 @@ class textVQG(nn.Module):
             mus and logvars of the batch.
         """
         # print("image_features:--", answer_features.shape)
-        bbox1 = bbox # bbox.repeat(1, 128)
+        bbox1 = bbox.repeat(1, 128)
         together = torch.cat((image_features, answer_features, bbox1.float()), dim=1)
         #together = torch.cat((image_features, answer_features), dim=1)
         # print(together.shape)

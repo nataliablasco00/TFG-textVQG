@@ -15,7 +15,7 @@ EOS_INDEX = 3
 
 class PositionalEncoding(nn.Module):
     def __init__(self, dim_model, dropout_p, max_len):
-        super().__init__()
+        super(PositionalEncoding, self).__init__()
         # Modified version from: https://pytorch.org/tutorials/beginner/transformer_tutorial.html
         # max_len determines how far the position can have an effect on a token (window)
 
@@ -39,7 +39,8 @@ class PositionalEncoding(nn.Module):
         pos_encoding = pos_encoding.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pos_encoding", pos_encoding)
 
-    def forward(self, token_embedding: torch.tensor) -> torch.tensor:
+    # def forward(self, token_embedding: torch.tensor) -> torch.tensor:
+    def forward(self, token_embedding):
         # Residual connection + pos encoding
         return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :])
 
@@ -48,15 +49,15 @@ class Transformer(nn.Module):
 
     def __init__(
         self,
-        num_tokens: int,
-        dim_model: int,
-        num_heads: int,
-        d_hid: int,
-        num_layers: int,
-        dropout_p: float,
-        n_positions: int,
+        num_tokens, # : int,
+        dim_model, # : int,
+        num_heads, # : int,
+        d_hid, # : int,
+        num_layers, # : int,
+        dropout_p, # : float,
+        n_positions, # : int,
     ):
-        super().__init__()
+        super(Transformer, self).__init__()
 
         # INFO
         self.model_type = "Transformer"
@@ -74,9 +75,9 @@ class Transformer(nn.Module):
             num_heads,
             d_hid,
             dropout_p,
-            batch_first=False,
-            activation=F.gelu,
-            norm_first=True,
+            # batch_first=False,
+            activation="gelu",
+            # norm_first=True,
         )
         self.transformer_encoder = TransformerEncoder(
             encoder_layers, num_layers)
@@ -85,11 +86,11 @@ class Transformer(nn.Module):
 
         self.init_weights()
 
-    def init_weights(self) -> None:
+    def init_weights(self): #  -> None:
         nn.init.xavier_uniform_(self.embedding.weight)
         nn.init.xavier_uniform_(self.out.weight)
 
-    def forward(self, src, src_mask=None, src_pad_mask=None) -> torch.tensor:
+    def forward(self, src, src_mask=None, src_pad_mask=None):  # -> torch.tensor:
         # Src size must be (batch_size, src sequence length)
         # Tgt size must be (batch_size, tgt sequence length)
 
@@ -108,15 +109,17 @@ class Transformer(nn.Module):
 
         return F.log_softmax(out, dim=-1)
 
-    def get_src_mask(self, sz) -> torch.tensor:
+    def get_src_mask(self, sz): #  -> torch.tensor:
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
 
-    def get_pad_mask(self, matrix: torch.tensor, pad_token: int) -> torch.tensor:
+    # def get_pad_mask(self, matrix: torch.tensor, pad_token: int) -> torch.tensor:
+    def get_pad_mask(self, matrix, pad_token):
         # If matrix = [1,2,3,0,0,0] where pad_token=0, the result mask is
         # [False, False, False, True, True, True]
         return (matrix == pad_token).t()
 
-    def predict(self, input_string: str = "<|THREAD|>", max_length: int = 80, temperature: float = 1.0, top_p: float = 1.0) -> str:
+    # def predict(self, input_string: str = "<|THREAD|>", max_length: int = 80, temperature: float = 1.0, top_p: float = 1.0) -> str:
+    def predict(self, input_string="<|THREAD|>", max_length=80, temperature=1.0, top_p=1.0):
         top_p = torch.tensor(top_p, dtype=torch.float, device=DEVICE)
         zero = torch.tensor(0.0, dtype=torch.float, device=DEVICE)
         self.to(DEVICE)

@@ -272,7 +272,7 @@ def train(args):
 
     # Loss criterion.
     pad = vocab(vocab.SYM_PAD)  # Set loss weight for 'pad' symbol to 0
-    criterion = nn.CrossEntropyLoss(ignore_index=pad)
+    criterion = nn.CrossEntropyLoss(ignore_index=pad) # NLLoss
     l2_criterion = nn.MSELoss()
 
     # Setup GPUs.

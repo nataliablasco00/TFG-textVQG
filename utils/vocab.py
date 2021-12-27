@@ -136,8 +136,8 @@ def tokenize(sentence):
     """
     if len(sentence) == 0:
         return []
-    #sentence = sentence.decode('utf8')
-    sentence = sentence.encode("ascii", "ignore").decode('utf8')
+    sentence = sentence.decode('utf8')
+    #sentence = sentence.encode("ascii", "ignore").decode('utf8')
     sentence = re.sub('\.+', r'.', sentence)
     sentence = re.sub('([a-z])([.,!?()])', r'\1 \2 ', sentence)
     sentence = re.sub('\s+', ' ', sentence)
