@@ -81,7 +81,7 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
     if args.eval_steps is not None:
         total_steps = min(len(data_loader), args.eval_steps)
     start_time = time.time()
-    for iterations, (images, questions, answers, qindices, bbox) in enumerate(data_loader):
+    for iterations, (images, questions, answers, qindices, bbox, _) in enumerate(data_loader):
 
         # Set mini-batch dataset
         if torch.cuda.is_available():
@@ -102,7 +102,6 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
         answer_features = textvqg.encode_answers(answers, alengths)
         position_features = textvqg.encode_position(bbox)
         zs = textvqg.encode_into_z(image_features, answer_features, bbox)
-        
 
         (outputs, _, other) = textvqg.decode_questions(
                 image_features, zs, questions=questions,
@@ -315,7 +314,7 @@ def train(args):
     total_info_loss = 0.0
   
     for epoch in range(args.num_epochs):
-        for i, (images, questions, answers, qindices, bbox) in enumerate(data_loader):
+        for i, (images, questions, answers, qindices, bbox, _) in enumerate(data_loader):
             n_steps += 1
             images=images[:-1]
             questions=questions[:-1]

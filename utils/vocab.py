@@ -43,7 +43,7 @@ class Vocabulary(object):
             word: String representation of the word.
         """
         if word not in self.word2idx:
-            self.word2idx[word] = self.idx
+            self.word2idx[str(word)] = self.idx
             self.idx2word[self.idx] = word
             self.idx += 1
 
@@ -66,10 +66,12 @@ class Vocabulary(object):
         return len(self.word2idx)
 
     def save(self, location):
-        with open(location, 'wb') as f:
-            json.dump({'word2idx': self.word2idx,
-                       'idx2word': self.idx2word,
-                       'idx': self.idx}, f)
+        dictionary = {}
+        dictionary['word2idx'] = self.word2idx
+        dictionary['idx2word'] = self.idx2word
+        dictionary['idx'] = self.idx
+        with open(location, "w") as f:
+            json.dump(dictionary, f)
 
     def load(self, location):
         with open(location, 'rb') as f:
@@ -93,6 +95,7 @@ class Vocabulary(object):
             if word not in [self.SYM_PAD, self.SYM_SOQ,
                             self.SYM_SOR, self.SYM_EOS]:
                 words.append(word)
+        #words = [w.encode("ascii", "ignore") for w in words]
         sentence = str(' '.join(words))
         return sentence
         
@@ -136,8 +139,6 @@ def tokenize(sentence):
     """
     if len(sentence) == 0:
         return []
-    sentence = sentence.decode('utf8')
-    #sentence = sentence.encode("ascii", "ignore").decode('utf8')
     sentence = re.sub('\.+', r'.', sentence)
     sentence = re.sub('([a-z])([.,!?()])', r'\1 \2 ', sentence)
     sentence = re.sub('\s+', ' ', sentence)
@@ -146,7 +147,7 @@ def tokenize(sentence):
             sentence.strip().lower())
     tokens1=[]
     for tok in tokens:
-        tokens1.append(tok.encode('utf8'))
+        tokens1.append(tok)
     return tokens1
 
 
@@ -171,11 +172,11 @@ def build_vocab(questions,  threshold):
 
     for entry in questions["data"]:
         qu = entry["question"]
-        q_tokens = tokenize(qu.encode('utf8'))
+        q_tokens = tokenize(qu)
         counter.update(q_tokens)
     for entry in questions["data"]:
         qu = entry["answers"][0]
-        q_tokens = tokenize(qu.encode('utf8'))
+        q_tokens = tokenize(qu)
         counter.update(q_tokens)
     print(counter)
 
@@ -219,5 +220,11 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     vocab = build_vocab(args.questions, args.threshold)
     logging.info("Total vocabulary size: %d" % len(vocab))
+
+    """import pickle
+
+    with open(args.vocab_path, "wb") as file:
+        pickle.dump(vocab.idx2word, file)"""
+
     vocab.save(args.vocab_path)
     logging.info("Saved the vocabulary wrapper to '%s'" % args.vocab_path)

@@ -36,10 +36,10 @@ def evaluate(textvqg, data_loader, vocab, args, params):
     # nlge = NLGEval(no_skipthoughts=True, no_FastText=True)
     preds = []
     gts = []
+    idxs = []
     bar = progressbar.ProgressBar(maxval=len(data_loader)).start()
     # for iterations, (images, questions, answers, _) in enumerate(data_loader):  # TODO: commented
-    for iterations, (images, questions, answers, qindices, bbox) in enumerate(data_loader):
-        #bbox[bbox!=0] = 0
+    for iterations, (images, questions, answers, qindices, bbox, img_indices) in enumerate(data_loader):
 
         # Set mini-batch dataset
         if torch.cuda.is_available():
@@ -48,6 +48,7 @@ def evaluate(textvqg, data_loader, vocab, args, params):
             bbox = bbox.cuda()
 
         alengths = process_lengths(answers)
+
         # Predict.
         if args.from_answer:
             outputs = textvqg.predict_from_answer(images, answers, bbox, alengths)  # TODO: added bbox
@@ -59,7 +60,9 @@ def evaluate(textvqg, data_loader, vocab, args, params):
 
             question = vocab.tokens_to_words(questions[i])
             gts.append(question)
+            idxs.append(int(img_indices[i]))
         bar.update(iterations)
+
     print('='*80)
     print('GROUND TRUTH')
     print(gts[:args.num_show])
@@ -68,7 +71,7 @@ def evaluate(textvqg, data_loader, vocab, args, params):
     print(preds[:args.num_show])
     print('='*80)
     # scores = nlge.compute_metrics(ref_list=[gts], hyp_list=preds)
-    return None, gts, preds
+    return idxs, gts, preds
 
 
 def main(args):
@@ -112,6 +115,7 @@ def main(args):
 
     # Build data loader
     logging.info("Building data loader...")
+
     data_loader = get_loader(args.dataset, transform,
                                  args.batch_size, shuffle=False,
                                  num_workers=args.num_workers,
@@ -143,12 +147,11 @@ def main(args):
         textvqg.cuda()
 
 
-    scores, gts, preds = evaluate(textvqg, data_loader, vocab, args, params)
+    idx, gts, preds = evaluate(textvqg, data_loader, vocab, args, params)
 
     # Print and save the scores.
-    print(scores)
-    with open(os.path.join(model_dir, args.results_path), 'w') as results_file:
-        json.dump(scores, results_file)
+    with open(os.path.join(model_dir, args.indices_path), 'w') as indices_file:
+        json.dump(idx, indices_file)
     with open(os.path.join(model_dir, args.preds_path), 'w') as preds_file:
         json.dump(preds, preds_file)
     with open(os.path.join(model_dir, args.gts_path), 'w') as gts_file:
@@ -161,7 +164,7 @@ if __name__ == '__main__':
     # Session parameters.
     parser.add_argument('--model-path', type=str, default = '/home/shankar/Desktop/VQA_REU/Stvqa/weights2/tf1/vqg-tf-8.pkl',
                         help='Path for loading trained models')
-    parser.add_argument('--results-path', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/results.json',
+    parser.add_argument('--indices-path', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/results.json',
                         help='Path for saving results.')
     parser.add_argument('--preds-path', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/preds.json',
                         help='Path for saving predictions.')

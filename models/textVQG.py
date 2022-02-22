@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from model import Transformer
+#from model import Transformer
 
 from .encoder_cnn import EncoderCNN
 from .encoder_rnn import EncoderRNN
@@ -72,23 +72,25 @@ class textVQG(nn.Module):
         self.z_decoder = nn.Linear(z_size, hidden_size)
         self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
                                num_layers=num_att_layers)
-        """self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
+        self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
                                   sos_id=sos_id,
                                   eos_id=eos_id,
                                   n_layers=num_layers,
                                   rnn_cell=rnn_cell,
                                   input_dropout_p=input_dropout_p,
                                   dropout_p=dropout_p,
-                                  embedding=embedding)"""
-        self.decoder = Transformer(
+                                  embedding=embedding)
+        """self.decoder = Transformer(
             num_tokens=vocab_size,
             dim_model=128,
             d_hid=512,
             num_heads=4, # 16
             num_layers=3, # 24,
             dropout_p=0.1,
-            n_positions=max_len
-        )
+            n_positions=max_len,
+            sos_id=sos_id,
+            embedding=embedding
+        )"""
 
 
 
@@ -154,7 +156,7 @@ class textVQG(nn.Module):
         # Output is list of MAX_LEN containing BATCH_SIZE * VOCAB_SIZE.
 
         # BATCH_SIZE * VOCAB_SIZE -> BATCH_SIZE
-        outputs = [o.max(1)[1] for o in outputs]
+        outputs = [o.max(1)[1] for o in outputs[0]]
 
         outputs = torch.stack(outputs)  # Tensor(max_len, batch)
         outputs = outputs.transpose(0, 1)  # Tensor(batch, max_len)
@@ -244,12 +246,21 @@ class textVQG(nn.Module):
         hiddens = hiddens.view((1, batch_size, self.hidden_size))
         hiddens = hiddens.expand((self.num_layers, batch_size,
                                   self.hidden_size)).contiguous()
-        if self.decoder.rnn_cell is nn.LSTM:
-            hiddens = (hiddens, hiddens)
+
+        try:
+            if self.decoder.rnn_cell is nn.LSTM:
+                hiddens = (hiddens, hiddens)
+        except:
+            pass
+
+        #result = self.decoder(src=questions, batch_size=batch_size)
+
         result = self.decoder(inputs=questions,
                               encoder_hidden=hiddens,
                               function=decode_function,
                               teacher_forcing_ratio=teacher_forcing_ratio)
+
+
         return result
 
     def forward(self, images, answers, categories, alengths=None, questions=None,
@@ -341,7 +352,7 @@ class textVQG(nn.Module):
             into the vocab word.
         """
         image_features, zs = self.encode_from_answer(images, answers,bbox, lengths=lengths)
-        outputs, _, _ = self.decode_questions(image_features, zs, questions=questions,
+        outputs = self.decode_questions(image_features, zs, questions=questions,
                                               decode_function=decode_function,
                                               teacher_forcing_ratio=teacher_forcing_ratio)
         return self.parse_outputs_to_tokens(outputs)

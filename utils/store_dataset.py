@@ -11,9 +11,9 @@ import numpy as np
 import os
 import progressbar
 
-from train_utils import Vocabulary
-from vocab import load_vocab
-from vocab import process_text
+from utils.train_utils import Vocabulary
+from utils.vocab import load_vocab
+from utils.vocab import process_text
 
 
 def create_answer_mapping(annotations, questions):
@@ -75,6 +75,7 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
     annos1 = annos
 
     img_shapes = {}
+    img_paths = {}
     for entry in annos1:
         image_id = entry.get("file_path")
         question_id = entry.get("file_path")+"-"+" ".join(entry.get("question"))
@@ -95,6 +96,7 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
 
             d_images[i_index, :, :, :] = np.array(image)
             done_img2idx[image_id] = i_index
+            img_paths[i_index] = path
             i_index += 1
 
         process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"]]
@@ -125,6 +127,8 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
     h5file.close()
     print ("Number of images written: %d" % i_index)
     print ("Number of QAs written: %d" % q_index)
+    with open('img_paths.json', 'w') as fp:
+        json.dump(img_paths, fp)
 
 
 if __name__ == '__main__':
