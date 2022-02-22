@@ -215,6 +215,8 @@ class textVQG(nn.Module):
         """
         # print("image_features:--", answer_features.shape)
         bbox1 = bbox.repeat(1, 128)
+        if answer_features.dim() == 1:
+            answer_features = anser_features[None, :]
         together = torch.cat((image_features, answer_features, bbox1.float()), dim=1)
         #together = torch.cat((image_features, answer_features), dim=1)
         # print(together.shape)
