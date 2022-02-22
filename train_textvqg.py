@@ -189,7 +189,6 @@ def compare_outputs(images, questions, answers, bbox,
         logging: logging to use to report results.
     """
     textvqg.eval()
-
     # Forward pass through the model.
     outputs = textvqg.predict_from_answer(images, answers,bbox, lengths=alengths)
     l = []
@@ -332,8 +331,7 @@ def train(args):
                 qindices = qindices.cuda()
                 bbox = bbox.cuda()
             alengths = process_lengths(answers)
-            # print(bbox)
-            # Eval now.
+
             if (args.eval_every_n_steps is not None and
                     n_steps >= args.eval_every_n_steps and
                     n_steps % args.eval_every_n_steps == 0):

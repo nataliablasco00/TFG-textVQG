@@ -96,6 +96,11 @@ def main(args):
     # Image preprocessing
     transform = transforms.Compose([
         transforms.ToTensor(),
+        transforms.ToPILImage(),
+        transforms.RandomResizedCrop(params.crop_size,
+                                     scale=(1.00, 1.2),
+                                     ratio=(0.75, 1.3333333333333333)),
+        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])])
 
