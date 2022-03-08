@@ -3,7 +3,7 @@
 
 import json
 
-# import fasttext
+# zimport fasttext
 import torch
 import torchtext
 import smart_open
