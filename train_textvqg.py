@@ -103,7 +103,7 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
         position_features = textvqg.encode_position(bbox)
         zs = textvqg.encode_into_z(image_features, answer_features, bbox)
 
-        (outputs, _, other) = textvqg.decode_questions(
+        outputs = textvqg.decode_questions(
                 image_features, zs, questions=questions,
                 teacher_forcing_ratio=1.0)
 
@@ -190,7 +190,7 @@ def compare_outputs(images, questions, answers, bbox,
     """
     textvqg.eval()
     # Forward pass through the model.
-    outputs = textvqg.predict_from_answer(images, answers,bbox, lengths=alengths)
+    outputs = textvqg.predict_from_answer(images, answers,bbox, questions=questions, lengths=alengths)
     l = []
     for _ in range(num_show):
         logging.info("         ")
@@ -287,7 +287,7 @@ def train(args):
     info_learning_rate = args.info_learning_rate
     gen_optimizer = torch.optim.Adam(gen_params, lr=learning_rate)
     info_optimizer = torch.optim.Adam(info_params, lr=info_learning_rate)
-    factor = 0.05 # TODO: Afegir per terminal
+    factor = 0.99 # TODO: Afegir per terminal
     min_lr = 1e-7
     scheduler = ReduceLROnPlateau(optimizer=gen_optimizer, mode='min',
                                   factor=factor, patience=args.patience,
@@ -352,10 +352,9 @@ def train(args):
             # Question generation.
             zs = textvqg.encode_into_z(image_features, answer_features, bbox)
            
-            (outputs, _, _) = textvqg.decode_questions(
+            outputs = textvqg.decode_questions(
                     image_features, zs, questions=questions,
                     teacher_forcing_ratio=1.0)
-            
             # Reorder the questions based on length.
             # questions = torch.index_select(questions, 0, qindices)
            

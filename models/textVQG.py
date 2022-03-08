@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 #from model import Transformer
+from models.Transformer_scratch import Transformer
 
 from .encoder_cnn import EncoderCNN
 from .encoder_rnn import EncoderRNN
@@ -92,10 +93,9 @@ class textVQG(nn.Module):
             embedding=embedding
         )"""
 
+        self.transformer = Transformer(vocab_size, vocab_size, 0, 0, device="cuda")
 
 
-   
-        
 
         # Setup answer reconstruction.
         if self.answer_recon:
@@ -156,7 +156,7 @@ class textVQG(nn.Module):
         # Output is list of MAX_LEN containing BATCH_SIZE * VOCAB_SIZE.
 
         # BATCH_SIZE * VOCAB_SIZE -> BATCH_SIZE
-        outputs = [o.max(1)[1] for o in outputs[0]]
+        outputs = [o.max(1)[1] for o in outputs]
 
         outputs = torch.stack(outputs)  # Tensor(max_len, batch)
         outputs = outputs.transpose(0, 1)  # Tensor(batch, max_len)
@@ -249,21 +249,24 @@ class textVQG(nn.Module):
         hiddens = hiddens.expand((self.num_layers, batch_size,
                                   self.hidden_size)).contiguous()
 
-        try:
+        """try:
             if self.decoder.rnn_cell is nn.LSTM:
                 hiddens = (hiddens, hiddens)
         except:
-            pass
+            pass"""
 
         #result = self.decoder(src=questions, batch_size=batch_size)
 
-        result = self.decoder(inputs=questions,
+        """result = self.decoder(inputs=questions,
                               encoder_hidden=hiddens,
                               function=decode_function,
-                              teacher_forcing_ratio=teacher_forcing_ratio)
+                              teacher_forcing_ratio=teacher_forcing_ratio)"""
+        result = self.transformer(hiddens, questions)
+
+        result_l = [result[:, i, :].squeeze() for i in range(result.shape[1])]
 
 
-        return result
+        return result_l
 
     def forward(self, images, answers, categories, alengths=None, questions=None,
                 teacher_forcing_ratio=0.5, decode_function=F.log_softmax):
@@ -292,7 +295,8 @@ class textVQG(nn.Module):
 
         # Calculate the mus and logvars.
         zs = self.encode_into_z(image_features, answer_hiddens, bbox)
-      
+
+
         result = self.decode_questions(image_features, zs,
                                        questions=questions,
                                        decode_function=decode_function,
@@ -357,4 +361,5 @@ class textVQG(nn.Module):
         outputs = self.decode_questions(image_features, zs, questions=questions,
                                               decode_function=decode_function,
                                               teacher_forcing_ratio=teacher_forcing_ratio)
+
         return self.parse_outputs_to_tokens(outputs)
