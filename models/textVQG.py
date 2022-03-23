@@ -216,7 +216,7 @@ class textVQG(nn.Module):
         # print("image_features:--", answer_features.shape)
         bbox1 = bbox.repeat(1, 128)
         if answer_features.dim() == 1:
-            answer_features = anser_features[None, :]
+            answer_features = answer_features[None, :]
         together = torch.cat((image_features, answer_features, bbox1.float()), dim=1)
         #together = torch.cat((image_features, answer_features), dim=1)
         # print(together.shape)
@@ -263,7 +263,7 @@ class textVQG(nn.Module):
                               teacher_forcing_ratio=teacher_forcing_ratio)"""
         result = self.transformer(hiddens, questions)
 
-        result_l = [result[:, i, :].squeeze() for i in range(result.shape[1])]
+        result_l = [result[:, i, :] for i in range(result.shape[1])]
 
 
         return result_l
