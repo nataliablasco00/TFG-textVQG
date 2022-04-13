@@ -104,7 +104,7 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
         zs = textvqg.encode_into_z(image_features, answer_features, bbox)
 
         outputs = textvqg.decode_questions(
-                image_features, zs, questions=questions,
+                image_features, zs, answer_features, questions=questions,
                 teacher_forcing_ratio=1.0)
 
         # Reorder the questions based on length.
@@ -353,7 +353,7 @@ def train(args):
             zs = textvqg.encode_into_z(image_features, answer_features, bbox)
            
             outputs = textvqg.decode_questions(
-                    image_features, zs, questions=questions,
+                    image_features, zs, answer_features, questions=questions,
                     teacher_forcing_ratio=1.0)
             # Reorder the questions based on length.
             # questions = torch.index_select(questions, 0, qindices)
@@ -392,7 +392,7 @@ def train(args):
 
             # Reconstruction loss.
             recon_answer_loss = 0.0
-            if not args.no_answer_recon:
+            """if not args.no_answer_recon:
                 total_info_loss = 0.0
                 gen_optimizer.zero_grad()
                 info_optimizer.zero_grad()
@@ -410,7 +410,7 @@ def train(args):
 
                 # Info backprop.
                 total_info_loss.backward()
-                info_optimizer.step()
+                info_optimizer.step()"""
 
 
             # Print log info

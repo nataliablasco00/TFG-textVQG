@@ -213,7 +213,7 @@ class Transformer(nn.Module):
         trg_vocab_size,
         src_pad_idx,
         trg_pad_idx,
-        embed_size=512,
+        embed_size=1024,
         num_layers=6,
         forward_expansion=4,
         heads=8,

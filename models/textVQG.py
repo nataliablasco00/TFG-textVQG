@@ -70,9 +70,9 @@ class textVQG(nn.Module):
                                     num_layers=num_att_layers)
 
         # Setup question decoder.
-        self.z_decoder = nn.Linear(z_size, hidden_size)
-        self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
-                               num_layers=num_att_layers)
+        # self.z_decoder = nn.Linear(z_size, hidden_size)
+        # self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
+        #                        num_layers=num_att_layers)
         self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
                                   sos_id=sos_id,
                                   eos_id=eos_id,
@@ -224,7 +224,7 @@ class textVQG(nn.Module):
         return attended_hiddens
 
 
-    def decode_questions(self, image_features, zs,
+    def decode_questions(self, image_features, zs, answer_features,
                          questions=None, teacher_forcing_ratio=0,
                          decode_function=F.log_softmax):
         """Decodes the question from the latent space.
@@ -237,17 +237,16 @@ class textVQG(nn.Module):
             decode_function: What to use when choosing a word from the
                 distribution over the vocabulary.
         """
-        batch_size = zs.size(0)
-        z_hiddens = self.z_decoder(zs)
+        batch_size = image_features.size(0)
+        #z_hiddens = self.z_decoder(zs)
         if image_features is None:
             hiddens = z_hiddens
         else:
-            hiddens = self.gen_decoder(image_features + z_hiddens)
-
+            hiddens = torch.cat((image_features, answer_features), dim=-1) # self.gen_decoder(image_features + z_hiddens)
         # Reshape encoder_hidden (NUM_LAYERS * N * HIDDEN_SIZE).
-        hiddens = hiddens.view((1, batch_size, self.hidden_size))
-        hiddens = hiddens.expand((self.num_layers, batch_size,
-                                  self.hidden_size)).contiguous()
+        hiddens = hiddens.view((1, batch_size, 1024))# self.hidden_size))
+        hiddens = hiddens.expand((self.num_layers, batch_size, 1024)).contiguous()
+                                  # self.hidden_size)).contiguous()
 
         """try:
             if self.decoder.rnn_cell is nn.LSTM:
@@ -257,11 +256,11 @@ class textVQG(nn.Module):
 
         #result = self.decoder(src=questions, batch_size=batch_size)
 
-        """result = self.decoder(inputs=questions,
+        result = self.decoder(inputs=questions,
                               encoder_hidden=hiddens,
                               function=decode_function,
-                              teacher_forcing_ratio=teacher_forcing_ratio)"""
-        result = self.transformer(hiddens, questions)
+                              teacher_forcing_ratio=teacher_forcing_ratio) # TODO: comentar
+        #result = self.transformer(hiddens, questions)  # TODO: descomentar
 
         result_l = [result[:, i, :] for i in range(result.shape[1])]
 
@@ -294,10 +293,10 @@ class textVQG(nn.Module):
         answer_hiddens = self.encode_answers(answers, alengths)
 
         # Calculate the mus and logvars.
-        zs = self.encode_into_z(image_features, answer_hiddens, bbox)
+        # zs = self.encode_into_z(image_features, answer_hiddens, bbox)
 
 
-        result = self.decode_questions(image_features, zs,
+        result = self.decode_questions(image_features, None, # zs,
                                        questions=questions,
                                        decode_function=decode_function,
                                        teacher_forcing_ratio=teacher_forcing_ratio)
@@ -333,9 +332,9 @@ class textVQG(nn.Module):
         """
         image_features = self.encode_images(images)
         answer_hiddens = self.encode_answers(answers, lengths)
-        zs = self.encode_into_z(image_features, answer_hiddens, bbox)
+        # zs = self.encode_into_z(image_features, answer_hiddens, bbox)
         
-        return image_features, zs
+        return image_features, None, answer_hiddens  # image_features, zs, answer_hiddens
 
 
 
@@ -357,8 +356,8 @@ class textVQG(nn.Module):
             A tensor with BATCH_SIZE X MAX_LEN where each element is the index
             into the vocab word.
         """
-        image_features, zs = self.encode_from_answer(images, answers,bbox, lengths=lengths)
-        outputs = self.decode_questions(image_features, zs, questions=questions,
+        image_features, zs, answer_features = self.encode_from_answer(images, answers,bbox, lengths=lengths)
+        outputs = self.decode_questions(image_features, zs, answer_features, questions=questions,
                                               decode_function=decode_function,
                                               teacher_forcing_ratio=teacher_forcing_ratio)
 
