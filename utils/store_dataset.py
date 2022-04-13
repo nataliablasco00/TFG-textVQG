@@ -12,9 +12,7 @@ import os
 import progressbar
 
 from utils.train_utils import Vocabulary
-from utils.vocab import load_vocab
-from utils.vocab import process_text
-
+from utils.vocab import load_vocab, process_text
 
 def create_answer_mapping(annotations, questions):
 
@@ -48,7 +46,7 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
     print ("Number of images to be written: %d" % total_images)
     print ("Number of QAs to be written: %d" % total_questions)
 
-    total_questions = 20273
+    total_questions = 1000 #19273# 20273
     h5file = h5py.File(output, "w")
     d_questions = h5file.create_dataset(
         "questions", (total_questions + 1, max_q_length), dtype='i')
@@ -76,7 +74,10 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
 
     img_shapes = {}
     img_paths = {}
-    for entry in annos1:
+    for idx, entry in enumerate(annos1):
+        if idx < 19273:
+            continue
+        print(idx)
         image_id = entry.get("file_path")
         question_id = entry.get("file_path")+"-"+" ".join(entry.get("question"))
         if image_id not in image_ids:
@@ -122,6 +123,8 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
 
         d_indices[q_index] = done_img2idx[image_id]
         q_index += 1
+        #if idx >= total_questions:
+        #    break
 
     # bar.update(q_index)
     h5file.close()
