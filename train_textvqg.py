@@ -287,7 +287,7 @@ def train(args):
     info_learning_rate = args.info_learning_rate
     gen_optimizer = torch.optim.Adam(gen_params, lr=learning_rate)
     info_optimizer = torch.optim.Adam(info_params, lr=info_learning_rate)
-    factor = 0.05 # TODO: Afegir per terminal
+    factor = 0.95 # TODO: Afegir per terminal
     min_lr = 1e-7
     scheduler = ReduceLROnPlateau(optimizer=gen_optimizer, mode='min',
                                   factor=factor, patience=args.patience,
