@@ -101,10 +101,10 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
         image_features = textvqg.encode_images(images)
         answer_features = textvqg.encode_answers(answers, alengths)
         position_features = textvqg.encode_position(bbox)
-        zs = textvqg.encode_into_z(image_features, answer_features, bbox)
+        #zs = textvqg.encode_into_z(image_features, answer_features, bbox)
 
         outputs = textvqg.decode_questions(
-                image_features, zs, answer_features, questions=questions,
+                image_features, None, answer_features, position_features, questions=questions,
                 teacher_forcing_ratio=1.0)
 
         # Reorder the questions based on length.
@@ -130,14 +130,14 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
 
 
         # Reconstruction.
-        if not args.no_image_recon or not args.no_answer_recon:
+        """if not args.no_image_recon or not args.no_answer_recon:
             image_targets = image_features.detach()
             answer_targets = answer_features.detach()
             recon_answer_features = textvqg.reconstruct_inputs(
                     image_targets, answer_targets,bbox)
             
             if not args.no_answer_recon:
-                recon_a_loss = l2_criterion(recon_answer_features, answer_targets)
+                recon_a_loss = l2_criterion(recon_answer_features, answer_targets)"""
                 
 
         # Quit after eval_steps.
@@ -190,7 +190,7 @@ def compare_outputs(images, questions, answers, bbox,
     """
     textvqg.eval()
     # Forward pass through the model.
-    outputs = textvqg.predict_from_answer(images, answers,bbox, questions=questions, lengths=alengths)
+    outputs = textvqg.predict_from_answer(images, answers, bbox, questions=questions, lengths=alengths)
     l = []
     for _ in range(num_show):
         logging.info("         ")
@@ -350,11 +350,11 @@ def train(args):
             ocr_token_pos = textvqg.encode_position(bbox)
             #print("answer features: ",answer_features.size())
             # Question generation.
-            zs = textvqg.encode_into_z(image_features, answer_features, bbox)
+            # zs = textvqg.encode_into_z(image_features, answer_features, ocr_token_pos)
            
             outputs = textvqg.decode_questions(
-                    image_features, zs, answer_features, questions=questions,
-                    teacher_forcing_ratio=1.0)
+                    image_features, None, answer_features, ocr_token_pos, questions=questions,
+                    teacher_forcing_ratio=1.0)  # TODO: Eliminar None (zs) de totes les crides
             # Reorder the questions based on length.
             # questions = torch.index_select(questions, 0, qindices)
            
