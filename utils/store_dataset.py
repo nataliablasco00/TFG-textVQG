@@ -11,8 +11,8 @@ import numpy as np
 import os
 import progressbar
 
-from utils.train_utils import Vocabulary
-from utils.vocab import load_vocab, process_text
+from train_utils import Vocabulary
+from vocab import load_vocab, process_text
 
 def create_answer_mapping(annotations, questions):
 
@@ -74,10 +74,11 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
 
     img_shapes = {}
     img_paths = {}
+    answers = {}
     for idx, entry in enumerate(annos1):
         if idx < 19273:
             continue
-        print(idx)
+
         image_id = entry.get("file_path")
         question_id = entry.get("file_path")+"-"+" ".join(entry.get("question"))
         if image_id not in image_ids:
@@ -117,6 +118,7 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
         d_questions[q_index, :length] = q
         # print(q, "----" ,d_questions[q_index, :length],"len is: ", length)
         answer = qid2ans[question_id]
+        answers[question_id] = answer
         ans, length = process_text(answer, vocab,
                                  max_length=max_a_length)
         d_answers[q_index, :length] = ans
@@ -132,6 +134,8 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
     print ("Number of QAs written: %d" % q_index)
     with open('img_paths.json', 'w') as fp:
         json.dump(img_paths, fp)
+    with open('answers.json', 'w') as fp:
+        json.dump(answers, fp)
 
 
 if __name__ == '__main__':
