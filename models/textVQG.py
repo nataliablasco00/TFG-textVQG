@@ -4,7 +4,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from model import Transformer
 from models.Transformer_scratch import Transformer
 
 from .encoder_cnn import EncoderCNN
@@ -46,7 +45,7 @@ class textVQG(nn.Module):
             z_size: Dimensions of noise epsilon.
         """
         super(textVQG, self).__init__()
-        self.answer_recon = not no_answer_recon
+        #self.answer_recon = not no_answer_recon
         self.hidden_size = hidden_size
         if encoder_max_len is None:
             encoder_max_len = max_len
@@ -72,7 +71,7 @@ class textVQG(nn.Module):
         # Setup question decoder.
         # self.z_decoder = nn.Linear(z_size, hidden_size)
         # self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
-        #                        num_layers=num_att_layers)
+        #                       num_layers=num_att_layers)
         """self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
                                   sos_id=sos_id,
                                   eos_id=eos_id,
@@ -93,11 +92,22 @@ class textVQG(nn.Module):
             embedding=embedding
         )"""
 
-        self.transformer = Transformer(vocab_size, vocab_size, 0, 0, device="cuda")
-        self.linear = nn.Linear(4, 64)
+        self.decoder = Transformer(vocab_size,
+        vocab_size,
+        sos_id,
+        sos_id,
+        embed_size=1088,
+        num_layers=4,
+        forward_expansion=4,
+        heads=4,
+        dropout=0,
+        device="cuda",
+        max_length=20)
+
+        self.lineal = nn.Linear(4, 64)
         self.relu = nn.ReLU()
-
-
+   
+        
 
         # Setup answer reconstruction.
         """if self.answer_recon:
@@ -105,11 +115,11 @@ class textVQG(nn.Module):
                     z_size, att_ff_size, hidden_size,
                     num_layers=num_att_layers)"""
 
-    def flatten_parameters(self):
+    """def flatten_parameters(self):
         if hasattr(self, 'decoder'):
             self.decoder.rnn.flatten_parameters()
         if hasattr(self, 'encoder'):
-            self.encoder.rnn.flatten_parameters()
+            self.encoder.rnn.flatten_parameters()"""
 
     def generator_parameters(self):
         params = self.parameters()
@@ -203,9 +213,9 @@ class textVQG(nn.Module):
         """
         # print(len(bbox))
 
-        return self.relu(self.linear(bbox.float().cuda()))
+        return self.relu(self.lineal(bbox.float()))
 
-    def encode_into_z(self, image_features, answer_features, bbox):
+    '''def encode_into_z(self, image_features, answer_features, bbox):
         """Encodes the attended features into z space.
 
         Args:
@@ -218,15 +228,15 @@ class textVQG(nn.Module):
         # print("image_features:--", answer_features.shape)
         bbox1 = bbox.repeat(1, 128)
         if answer_features.dim() == 1:
-            answer_features = answer_features[None, :]
+            answer_features = anser_features[None, :]
         together = torch.cat((image_features, answer_features, bbox1.float()), dim=1)
         #together = torch.cat((image_features, answer_features), dim=1)
         # print(together.shape)
         attended_hiddens = self.answer_attention(together)
-        return attended_hiddens
+        return attended_hiddens'''
 
 
-    def decode_questions(self, image_features, zs, answer_features, bbox_features,
+    def decode_questions(self, image_features, zs, answer, ocr,
                          questions=None, teacher_forcing_ratio=0,
                          decode_function=F.log_softmax):
         """Decodes the question from the latent space.
@@ -239,36 +249,38 @@ class textVQG(nn.Module):
             decode_function: What to use when choosing a word from the
                 distribution over the vocabulary.
         """
-        batch_size = image_features.size(0)
+        #batch_size = zs.size(0)
         #z_hiddens = self.z_decoder(zs)
-        if image_features is None:
-            hiddens = z_hiddens
-        else:
-            hiddens = torch.cat((image_features, answer_features), dim=-1) # self.gen_decoder(image_features + z_hiddens)
-            hiddens = torch.cat((hiddens, bbox_features), dim=-1)
-        # Reshape encoder_hidden (NUM_LAYERS * N * HIDDEN_SIZE).
-        hiddens = hiddens.view((1, batch_size, 1088))# self.hidden_size))
-        hiddens = hiddens.expand((self.num_layers, batch_size, 1088)).contiguous()
-                                  # self.hidden_size)).contiguous()
+        #if image_features is None:
+        #    hiddens = z_hiddens
+        #else:
+        #    hiddens = self.gen_decoder(image_features + z_hiddens)
 
-        """try:
-            if self.decoder.rnn_cell is nn.LSTM:
-                hiddens = (hiddens, hiddens)
-        except:
-            pass"""
+        # Reshape encoder_hidden (NUM_LAYERS * N * HIDDEN_SIZE).
+        #hiddens = hiddens.view((1, batch_size, self.hidden_size))
+        #hiddens = hiddens.expand((self.num_layers, batch_size,
+        #                          self.hidden_size)).contiguous()
+
+        #try:
+        #    if self.decoder.rnn_cell is nn.LSTM:
+        #        hiddens = (hiddens, hiddens)
+        #except:
+        #    pass
 
         #result = self.decoder(src=questions, batch_size=batch_size)
 
-        """result = self.decoder(inputs=questions,
-                              encoder_hidden=hiddens,
-                              function=decode_function,
-                              teacher_forcing_ratio=teacher_forcing_ratio) # TODO: comentar"""
-        result = self.transformer(hiddens, questions)  # TODO: descomentar
+        #result = self.decoder(inputs=questions,
+        #                      encoder_hidden=hiddens,
+        #                      function=decode_function,
+        #                      teacher_forcing_ratio=teacher_forcing_ratio)
 
-        result_l = [result[:, i, :] for i in range(result.shape[1])]
+        if len(answer.size()) == 1:
+            answer = answer.unsqueeze(0)
+        src = torch.cat((image_features, answer, ocr), 1)
 
+        result = self.decoder(src=src.unsqueeze(0), trg=questions)
 
-        return result_l
+        return result
 
     def forward(self, images, answers, categories, alengths=None, questions=None,
                 teacher_forcing_ratio=0.5, decode_function=F.log_softmax):
@@ -297,16 +309,15 @@ class textVQG(nn.Module):
 
         # Calculate the mus and logvars.
         # zs = self.encode_into_z(image_features, answer_hiddens, bbox)
-
-
-        result = self.decode_questions(image_features, None, # zs,
+        bbox = self.encode_position(bbox)
+        result = self.decode_questions(image_features, None, answer_hiddens, bbox,
                                        questions=questions,
                                        decode_function=decode_function,
                                        teacher_forcing_ratio=teacher_forcing_ratio)
 
         return result
 
-    def reconstruct_inputs(self, image_features, answer_features,bbox):
+    '''def reconstruct_inputs(self, image_features, answer_features,bbox):
         """
 
         Args:
@@ -317,12 +328,12 @@ class textVQG(nn.Module):
         """
        
         recon_answer_features = None
-        #zs = self.encode_into_z(image_features, answer_features, bbox)
-        """if self.answer_recon:
-            recon_answer_features = self.answer_reconstructor(zs)"""
-        return recon_answer_features
+        zs = self.encode_into_z(image_features, answer_features, bbox)
+        if self.answer_recon:
+            recon_answer_features = self.answer_reconstructor(zs)
+        return recon_answer_features'''
 
-    def encode_from_answer(self, images, answers,bbox, lengths=None):
+    '''def encode_from_answer(self, images, answers,bbox, lengths=None):
         """
 
         Args:
@@ -335,14 +346,13 @@ class textVQG(nn.Module):
         """
         image_features = self.encode_images(images)
         answer_hiddens = self.encode_answers(answers, lengths)
-        bbox_features = self.linear(bbox.cuda())
-        # zs = self.encode_into_z(image_features, answer_hiddens, bbox)
+        zs = self.encode_into_z(image_features, answer_hiddens, bbox)
         
-        return image_features, None, answer_hiddens, bbox_features # image_features, zs, answer_hiddens
+        return image_features, zs'''
 
 
 
-    def predict_from_answer(self, images, answers, bbox, lengths=None,
+    def predict_from_answer(self, images, answers,bbox, lengths=None,
                             questions=None, teacher_forcing_ratio=0,
                             decode_function=F.log_softmax):
         """Outputs the predicted vocab tokens for the answers in a minibatch.
@@ -360,9 +370,11 @@ class textVQG(nn.Module):
             A tensor with BATCH_SIZE X MAX_LEN where each element is the index
             into the vocab word.
         """
-        image_features, zs, answer_features, bbox_features = self.encode_from_answer(images, answers, bbox.type(torch.FloatTensor), lengths=lengths)
-        outputs = self.decode_questions(image_features, zs, answer_features, bbox_features, questions=questions,
+        # image_features, zs = self.encode_from_answer(images, answers,bbox, lengths=lengths)
+        image_features = self.encode_images(images)
+        answers = self.encode_answers(answers, lengths)
+        bbox = self.encode_position(bbox)
+        outputs = self.decode_questions(image_features, None, answers, bbox, questions=questions,
                                               decode_function=decode_function,
                                               teacher_forcing_ratio=teacher_forcing_ratio)
-
-        return self.parse_outputs_to_tokens(outputs)
+        return torch.transpose(self.parse_outputs_to_tokens(outputs), 0, 1)
