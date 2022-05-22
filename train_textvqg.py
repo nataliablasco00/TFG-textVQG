@@ -117,7 +117,7 @@ def evaluate(textvqg, data_loader, criterion, l2_criterion, args):
         # Convert the output from MAX_LEN list of (BATCH x VOCAB) ->
         # (BATCH x MAX_LEN x VOCAB).
         outputs = [o.unsqueeze(1) for o in outputs]
-        outputs = torch.cat(outputs, dim=1)
+        outputs = torch.transpose(torch.cat(outputs, dim=1), 0, 1)
         # outputs = torch.index_select(outputs, 0, qindices)
 
         # Calculate the loss.
@@ -365,8 +365,9 @@ def train(args):
             # Convert the output from MAX_LEN list of (BATCH x VOCAB) ->
             # (BATCH x MAX_LEN x VOCAB).
             outputs = [o.unsqueeze(1) for o in outputs]
-           
-            outputs = torch.cat(outputs, dim=1)
+
+            outputs = torch.transpose(torch.cat(outputs, dim=1), 0, 1)
+
            
             # outputs = torch.index_select(outputs, 0, qindices)
             # print("outputs: ", outputs.size())

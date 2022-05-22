@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from model import Transformer
+from models.Transformer_scratch import Transformer
 
 from .encoder_cnn import EncoderCNN
 from .encoder_rnn import EncoderRNN
@@ -45,7 +45,7 @@ class textVQG(nn.Module):
             z_size: Dimensions of noise epsilon.
         """
         super(textVQG, self).__init__()
-        self.answer_recon = not no_answer_recon
+        #self.answer_recon = not no_answer_recon
         self.hidden_size = hidden_size
         if encoder_max_len is None:
             encoder_max_len = max_len
@@ -69,17 +69,17 @@ class textVQG(nn.Module):
                                     num_layers=num_att_layers)
 
         # Setup question decoder.
-        self.z_decoder = nn.Linear(z_size, hidden_size)
-        self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
-                               num_layers=num_att_layers)
-        self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
+        # self.z_decoder = nn.Linear(z_size, hidden_size)
+        # self.gen_decoder = MLP(hidden_size, att_ff_size, hidden_size,
+        #                       num_layers=num_att_layers)
+        """self.decoder = DecoderRNN(vocab_size, max_len, hidden_size,
                                   sos_id=sos_id,
                                   eos_id=eos_id,
                                   n_layers=num_layers,
                                   rnn_cell=rnn_cell,
                                   input_dropout_p=input_dropout_p,
                                   dropout_p=dropout_p,
-                                  embedding=embedding)
+                                  embedding=embedding)"""
         """self.decoder = Transformer(
             num_tokens=vocab_size,
             dim_model=128,
@@ -92,22 +92,34 @@ class textVQG(nn.Module):
             embedding=embedding
         )"""
 
+        self.decoder = Transformer(vocab_size,
+        vocab_size,
+        sos_id,
+        sos_id,
+        embed_size=1088,
+        num_layers=4,
+        forward_expansion=4,
+        heads=4,
+        dropout=0,
+        device="cuda",
+        max_length=20)
 
-
+        self.lineal = nn.Linear(4, 64)
+        self.relu = nn.ReLU()
    
         
 
         # Setup answer reconstruction.
-        if self.answer_recon:
+        """if self.answer_recon:
             self.answer_reconstructor = MLP(
                     z_size, att_ff_size, hidden_size,
-                    num_layers=num_att_layers)
+                    num_layers=num_att_layers)"""
 
-    def flatten_parameters(self):
+    """def flatten_parameters(self):
         if hasattr(self, 'decoder'):
             self.decoder.rnn.flatten_parameters()
         if hasattr(self, 'encoder'):
-            self.encoder.rnn.flatten_parameters()
+            self.encoder.rnn.flatten_parameters()"""
 
     def generator_parameters(self):
         params = self.parameters()
@@ -119,8 +131,8 @@ class textVQG(nn.Module):
 
         # Reconstruction parameters.
         
-        if self.answer_recon:
-            params += list(self.answer_reconstructor.parameters())
+        """if self.answer_recon:
+            params += list(self.answer_reconstructor.parameters())"""
 
         params = filter(lambda p: p.requires_grad, params)
         return params
@@ -156,7 +168,7 @@ class textVQG(nn.Module):
         # Output is list of MAX_LEN containing BATCH_SIZE * VOCAB_SIZE.
 
         # BATCH_SIZE * VOCAB_SIZE -> BATCH_SIZE
-        outputs = [o.max(1)[1] for o in outputs[0]]
+        outputs = [o.max(1)[1] for o in outputs]
 
         outputs = torch.stack(outputs)  # Tensor(max_len, batch)
         outputs = outputs.transpose(0, 1)  # Tensor(batch, max_len)
@@ -201,9 +213,9 @@ class textVQG(nn.Module):
         """
         # print(len(bbox))
 
-        return bbox
+        return self.relu(self.lineal(bbox.float()))
 
-    def encode_into_z(self, image_features, answer_features, bbox):
+    '''def encode_into_z(self, image_features, answer_features, bbox):
         """Encodes the attended features into z space.
 
         Args:
@@ -221,10 +233,10 @@ class textVQG(nn.Module):
         #together = torch.cat((image_features, answer_features), dim=1)
         # print(together.shape)
         attended_hiddens = self.answer_attention(together)
-        return attended_hiddens
+        return attended_hiddens'''
 
 
-    def decode_questions(self, image_features, zs,
+    def decode_questions(self, image_features, zs, answer, ocr,
                          questions=None, teacher_forcing_ratio=0,
                          decode_function=F.log_softmax):
         """Decodes the question from the latent space.
@@ -237,31 +249,36 @@ class textVQG(nn.Module):
             decode_function: What to use when choosing a word from the
                 distribution over the vocabulary.
         """
-        batch_size = zs.size(0)
-        z_hiddens = self.z_decoder(zs)
-        if image_features is None:
-            hiddens = z_hiddens
-        else:
-            hiddens = self.gen_decoder(image_features + z_hiddens)
+        #batch_size = zs.size(0)
+        #z_hiddens = self.z_decoder(zs)
+        #if image_features is None:
+        #    hiddens = z_hiddens
+        #else:
+        #    hiddens = self.gen_decoder(image_features + z_hiddens)
 
         # Reshape encoder_hidden (NUM_LAYERS * N * HIDDEN_SIZE).
-        hiddens = hiddens.view((1, batch_size, self.hidden_size))
-        hiddens = hiddens.expand((self.num_layers, batch_size,
-                                  self.hidden_size)).contiguous()
+        #hiddens = hiddens.view((1, batch_size, self.hidden_size))
+        #hiddens = hiddens.expand((self.num_layers, batch_size,
+        #                          self.hidden_size)).contiguous()
 
-        try:
-            if self.decoder.rnn_cell is nn.LSTM:
-                hiddens = (hiddens, hiddens)
-        except:
-            pass
+        #try:
+        #    if self.decoder.rnn_cell is nn.LSTM:
+        #        hiddens = (hiddens, hiddens)
+        #except:
+        #    pass
 
         #result = self.decoder(src=questions, batch_size=batch_size)
 
-        result = self.decoder(inputs=questions,
-                              encoder_hidden=hiddens,
-                              function=decode_function,
-                              teacher_forcing_ratio=teacher_forcing_ratio)
+        #result = self.decoder(inputs=questions,
+        #                      encoder_hidden=hiddens,
+        #                      function=decode_function,
+        #                      teacher_forcing_ratio=teacher_forcing_ratio)
 
+        if len(answer.size()) == 1:
+            answer = answer.unsqueeze(0)
+        src = torch.cat((image_features, answer, ocr), 1)
+
+        result = self.decoder(src=src.unsqueeze(0), trg=questions)
 
         return result
 
@@ -291,16 +308,16 @@ class textVQG(nn.Module):
         answer_hiddens = self.encode_answers(answers, alengths)
 
         # Calculate the mus and logvars.
-        zs = self.encode_into_z(image_features, answer_hiddens, bbox)
-      
-        result = self.decode_questions(image_features, zs,
+        # zs = self.encode_into_z(image_features, answer_hiddens, bbox)
+        bbox = self.encode_position(bbox)
+        result = self.decode_questions(image_features, None, answer_hiddens, bbox,
                                        questions=questions,
                                        decode_function=decode_function,
                                        teacher_forcing_ratio=teacher_forcing_ratio)
 
         return result
 
-    def reconstruct_inputs(self, image_features, answer_features,bbox):
+    '''def reconstruct_inputs(self, image_features, answer_features,bbox):
         """
 
         Args:
@@ -314,9 +331,9 @@ class textVQG(nn.Module):
         zs = self.encode_into_z(image_features, answer_features, bbox)
         if self.answer_recon:
             recon_answer_features = self.answer_reconstructor(zs)
-        return recon_answer_features
+        return recon_answer_features'''
 
-    def encode_from_answer(self, images, answers,bbox, lengths=None):
+    '''def encode_from_answer(self, images, answers,bbox, lengths=None):
         """
 
         Args:
@@ -331,7 +348,7 @@ class textVQG(nn.Module):
         answer_hiddens = self.encode_answers(answers, lengths)
         zs = self.encode_into_z(image_features, answer_hiddens, bbox)
         
-        return image_features, zs
+        return image_features, zs'''
 
 
 
@@ -353,8 +370,11 @@ class textVQG(nn.Module):
             A tensor with BATCH_SIZE X MAX_LEN where each element is the index
             into the vocab word.
         """
-        image_features, zs = self.encode_from_answer(images, answers,bbox, lengths=lengths)
-        outputs = self.decode_questions(image_features, zs, questions=questions,
+        # image_features, zs = self.encode_from_answer(images, answers,bbox, lengths=lengths)
+        image_features = self.encode_images(images)
+        answers = self.encode_answers(answers, lengths)
+        bbox = self.encode_position(bbox)
+        outputs = self.decode_questions(image_features, None, answers, bbox, questions=questions,
                                               decode_function=decode_function,
                                               teacher_forcing_ratio=teacher_forcing_ratio)
-        return self.parse_outputs_to_tokens(outputs)
+        return torch.transpose(self.parse_outputs_to_tokens(outputs), 0, 1)
