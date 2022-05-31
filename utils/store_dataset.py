@@ -11,8 +11,8 @@ import numpy as np
 import os
 import progressbar
 
-from train_utils import Vocabulary
-from vocab import load_vocab, process_text
+from utils.train_utils import Vocabulary
+from utils.vocab import load_vocab, process_text
 
 def create_answer_mapping(annotations, questions):
 

@@ -19,11 +19,11 @@ def create_answer_mapping(annotations, questions):
     # data = annotations
     answers = {}
     image_ids = set()
-    for q in questions["data"]:
-        question_id = q.get("image_id")+"-"+" ".join(q.get("question"))
-        answer = q.get("answers")[0]
+    for q in questions["anns"]:
+        question_id = q
+        answer = questions["anns"][q].get("utf8_string")
         answers[question_id] = answer
-        image_ids.add(q.get("image_id"))
+        image_ids.add(questions["anns"][q].get("image_id"))
     return answers, image_ids
 
 
@@ -40,14 +40,14 @@ def save_dataset(image_dir, questions, OCR, vocab,output,
         questions = json.load(f)
 
     # Get the mappings from qid to answers.
-    print(" -->", len(ocr["data"]), len(questions["data"]))
+    # print(" -->", len(ocr["data"]), len(questions["data"]))
     qid2ans, image_ids = create_answer_mapping(ocr, questions)
-    total_questions = len(questions["data"])+1
+    total_questions = len(questions["anns"])+1
     total_images = len(image_ids)
     print ("Number of images to be written: %d" % total_images)
     print ("Number of QAs to be written: %d" % total_questions)
 
-    total_questions = 698#5043
+    total_questions = 698661#698#5043
     h5file = h5py.File(output, "w")
     d_questions = h5file.create_dataset(
         "questions", (total_questions + 1, max_q_length), dtype='i')
@@ -72,23 +72,25 @@ def save_dataset(image_dir, questions, OCR, vocab,output,
     done_img2idx = {}
     img_shapes = {}
     img_paths = {}
-    for idx, entry in enumerate(questions["data"]):
-        print(q_index)
-        image_id = entry.get("image_id")
-        question_id = entry.get("image_id")+"-"+" ".join(entry.get("question"))
+    q_indices = {}
+    for idx, entry in enumerate(questions["anns"]):
+        question_id = entry
+        image_id = questions["anns"][question_id].get("image_id")
+        #question_id = entry.get("id")
+        answer = qid2ans[question_id]
+        if any(ext in answer for ext in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):
+            print(q_index, "-->", answer)
+            #auxiliar = True
+        else:
+            continue
+        bbox = questions["anns"][question_id].get("bbox")
+        bbox[0] = bbox[0]/questions["imgs"][image_id]["width"]
+        #bbox[2] = bbox[2]/questions["imgs"][image_id]["width"]
+        bbox[1] = bbox[1] / questions["imgs"][image_id]["height"]
+        #bbox[3] = bbox[3] / questions["imgs"][image_id]["height"]
 
-        bbox = []
-        for r in ocr["data"]:
-            if image_id == r["image_id"]:
-                for s1 in entry["answers"][0].split(" "):
-                    for s2 in r["ocr_info"]:
-                        if s1 == s2["word"]:
-                            #aux = list(s2["bounding_box"].values())
-                            aux = s2["bounding_box"]
-                            #print(aux)
-                            #"width": 0.07924199104309082, "height": 0.030721843242645264, "rotation": 0, "roll": 0, "pitch": 0, "yaw": 0, "top_left_x": 0.18424682319164276, "top_left_y": 0.23175470530986786
-                            bbox.append([aux["top_left_x"], aux["top_left_y"], aux["width"]+aux["top_left_x"], aux["height"]+aux["top_left_y"]])
-                break
+        bbox[2] = bbox[0] + bbox[2]/questions["imgs"][image_id]["width"]
+        bbox[3] = bbox[1] + bbox[3]/questions["imgs"][image_id]["height"]
 
         if len(bbox) == 0:
             continue
@@ -113,22 +115,13 @@ def save_dataset(image_dir, questions, OCR, vocab,output,
             img_paths[i_index] = path
             i_index += 1
 
-        #process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"]]
-        v0, v1, v2, v3 = float('inf'), float('inf'), 0, 0
-        for x in bbox:
-            v0 = min(v0, x[0])
-            v1 = min(v1, x[1])
-            v2 = max(v2, x[2])
-            v3 = max(v3, x[3])
-
         # print(entry.get("ocr_position"))
         s = img_shapes[image_id]
-        d_ocr_positions[q_index, :4] = [float(v0), float(v1), float(v2), float(v3)]
-        q, length = process_text(entry['question'], vocab,
-                                 max_length=max_q_length)
-        d_questions[q_index, :length] = q
+        d_ocr_positions[q_index, :4] = bbox
+        q, length = question_id, 1
+        d_questions[q_index, :length] = idx
+        q_indices[idx] = q
         # print(q, "----" ,d_questions[q_index, :length],"len is: ", length)
-        answer = qid2ans[question_id]
         ans, length = process_text(answer, vocab,
                                  max_length=max_a_length)
 
@@ -145,6 +138,8 @@ def save_dataset(image_dir, questions, OCR, vocab,output,
     print ("Number of QAs written: %d" % q_index)
     with open('img_paths.json', 'w') as fp:
         json.dump(img_paths, fp)
+    with open('q_indices.json', 'w') as fp:
+        json.dump(q_indices, fp)
 
 
 if __name__ == '__main__':
