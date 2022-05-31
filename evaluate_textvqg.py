@@ -34,14 +34,18 @@ def evaluate(textvqg, data_loader, vocab, args, params):
     """
     textvqg.eval()
     # nlge = NLGEval(no_skipthoughts=True, no_FastText=True)
-    preds = []
-    gts = []
-    idxs = []
+    model_dir = os.path.dirname(args.model_path)
+    q_idxs = []
     bar = progressbar.ProgressBar(maxval=len(data_loader)).start()
     # for iterations, (images, questions, answers, _) in enumerate(data_loader):  # TODO: commented
     for iterations, (images, questions, answers, qindices, bbox, img_indices) in enumerate(data_loader):
-
         # Set mini-batch dataset
+        # print(img_indices, vocab.tokens_to_words(answers[0]))
+        idx = []
+        preds = []
+        gts = []
+        d = []
+
         if torch.cuda.is_available():
             images = images.cuda()
             answers = answers.cuda()
@@ -56,13 +60,30 @@ def evaluate(textvqg, data_loader, vocab, args, params):
 
         for i in range(images.size(0)):
             output = vocab.tokens_to_words(outputs[i])
-            preds.append(output)
+            #preds.append(output)
 
-            question = vocab.tokens_to_words(questions[i])
-            gts.append(question)
-            idxs.append(int(img_indices[i]))
+            question = questions[i]
+            #gts.append(question)
+            #idx.append(int(img_indices[i]))
+            #q_idxs.append(qindices[i])
+            aux = {}
+            aux["question"] = output
+            aux["q_idx"] = int(question[0])
+            aux["idx"] = int(img_indices[i])
+            d.append(aux)
+
+        with open(os.path.join(model_dir, args.q_indices), 'a') as f:
+            f.write(str(d))
+            f.write("\n")
+
+        """with open(os.path.join(model_dir, args.indices_path), 'a') as indices_file:
+            json.dump(idx, indices_file)
+        with open(os.path.join(model_dir, args.preds_path), 'a') as preds_file:
+            json.dump(preds, preds_file)
+        with open(os.path.join(model_dir, args.gts_path), 'a') as gts_file:
+            json.dump(str(gts), gts_file)"""
         bar.update(iterations)
-
+    print(q_idxs)
     print('='*80)
     print('GROUND TRUTH')
     print(gts[:args.num_show])
@@ -71,7 +92,10 @@ def evaluate(textvqg, data_loader, vocab, args, params):
     print(preds[:args.num_show])
     print('='*80)
     # scores = nlge.compute_metrics(ref_list=[gts], hyp_list=preds)
-    return idxs, gts, preds
+    """    with open(os.path.join(model_dir, args.q_indices), 'w') as gts_file:
+        json.dump(q_idxs, gts_file)"""
+
+    return idx, gts, preds
 
 
 def main(args):
@@ -155,12 +179,12 @@ def main(args):
     idx, gts, preds = evaluate(textvqg, data_loader, vocab, args, params)
 
     # Print and save the scores.
-    with open(os.path.join(model_dir, args.indices_path), 'w') as indices_file:
+    """with open(os.path.join(model_dir, args.indices_path), 'w') as indices_file:
         json.dump(idx, indices_file)
     with open(os.path.join(model_dir, args.preds_path), 'w') as preds_file:
         json.dump(preds, preds_file)
     with open(os.path.join(model_dir, args.gts_path), 'w') as gts_file:
-        json.dump(gts, gts_file)
+        json.dump(gts, gts_file)"""
 
 
 if __name__ == '__main__':
@@ -172,6 +196,8 @@ if __name__ == '__main__':
     parser.add_argument('--indices-path', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/results.json',
                         help='Path for saving results.')
     parser.add_argument('--preds-path', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/preds.json',
+                        help='Path for saving predictions.')
+    parser.add_argument('--q-indices', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/q_indices.json',
                         help='Path for saving predictions.')
     parser.add_argument('--gts-path', type=str, default='/home/shankar/Desktop/VQA_REU/Stvqa/weights/gts.json',
                         help='Path for saving ground truth.')

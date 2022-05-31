@@ -110,9 +110,9 @@ def get_FastText_embedding(name, embed_size, vocab, questions=None):
 
     #ft = torchtext.vocab.FastText('en', max_vectors=embed_size)
 
-    #ft = BertTokenizer.from_pretrained('bert-base-uncased')
+    ft = BertTokenizer.from_pretrained('bert-base-uncased')
 
-    ft = T5Tokenizer.from_pretrained("t5-small")
+    #ft = T5Tokenizer.from_pretrained("t5-small")
 
     vocab_size = len(vocab)
     embedding = torch.zeros(vocab_size, embed_size)
