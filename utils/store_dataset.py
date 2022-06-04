@@ -46,7 +46,7 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
     print ("Number of images to be written: %d" % total_images)
     print ("Number of QAs to be written: %d" % total_questions)
 
-    total_questions = 1000 #19273# 20273
+    total_questions = 1000 # 19273 # 1000 # 20273
     h5file = h5py.File(output, "w")
     d_questions = h5file.create_dataset(
         "questions", (total_questions + 1, max_q_length), dtype='i')
@@ -76,6 +76,8 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
     img_paths = {}
     answers = {}
     for idx, entry in enumerate(annos1):
+        """if idx >= 19273:
+            break # continue"""
         if idx < 19273:
             continue
 
@@ -101,7 +103,9 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
             img_paths[i_index] = path
             i_index += 1
 
-        process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"]]
+        #process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"]]
+        process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"] if x["text"] in entry["answer"] ]
+
         v0, v1, v2, v3 = float('inf'), float('inf'), 0, 0
         for x in process_ocr_pos:
             v0 = min(v0, x[0])

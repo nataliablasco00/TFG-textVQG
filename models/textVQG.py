@@ -100,7 +100,7 @@ class textVQG(nn.Module):
         num_layers=4,
         forward_expansion=4,
         heads=4,
-        dropout=0,
+        dropout=0.1,
         device="cuda",
         max_length=20)
 
