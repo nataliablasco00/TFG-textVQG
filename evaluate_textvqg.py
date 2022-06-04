@@ -35,15 +35,14 @@ def evaluate(textvqg, data_loader, vocab, args, params):
     textvqg.eval()
     # nlge = NLGEval(no_skipthoughts=True, no_FastText=True)
     model_dir = os.path.dirname(args.model_path)
-    q_idxs = []
+    idx = []
+    preds = []
+    gts = []
     bar = progressbar.ProgressBar(maxval=len(data_loader)).start()
     # for iterations, (images, questions, answers, _) in enumerate(data_loader):  # TODO: commented
     for iterations, (images, questions, answers, qindices, bbox, img_indices) in enumerate(data_loader):
         # Set mini-batch dataset
         # print(img_indices, vocab.tokens_to_words(answers[0]))
-        idx = []
-        preds = []
-        gts = []
         d = []
 
         if torch.cuda.is_available():
@@ -60,15 +59,15 @@ def evaluate(textvqg, data_loader, vocab, args, params):
 
         for i in range(images.size(0)):
             output = vocab.tokens_to_words(outputs[i])
-            #preds.append(output)
+            preds.append(output)
 
-            question = questions[i]
-            #gts.append(question)
-            #idx.append(int(img_indices[i]))
+            question = vocab.tokens_to_words(questions[i])
+            gts.append(question)
+            idx.append(int(img_indices[i]))
             #q_idxs.append(qindices[i])
             aux = {}
             aux["question"] = output
-            aux["q_idx"] = int(question[0])
+            #aux["q_idx"] = int(question[0])
             aux["idx"] = int(img_indices[i])
             d.append(aux)
 
@@ -83,7 +82,7 @@ def evaluate(textvqg, data_loader, vocab, args, params):
         with open(os.path.join(model_dir, args.gts_path), 'a') as gts_file:
             json.dump(str(gts), gts_file)"""
         bar.update(iterations)
-    print(q_idxs)
+    #print(q_idxs)
     print('='*80)
     print('GROUND TRUTH')
     print(gts[:args.num_show])
@@ -179,12 +178,12 @@ def main(args):
     idx, gts, preds = evaluate(textvqg, data_loader, vocab, args, params)
 
     # Print and save the scores.
-    """with open(os.path.join(model_dir, args.indices_path), 'w') as indices_file:
+    with open(os.path.join(model_dir, args.indices_path), 'w') as indices_file:
         json.dump(idx, indices_file)
     with open(os.path.join(model_dir, args.preds_path), 'w') as preds_file:
         json.dump(preds, preds_file)
     with open(os.path.join(model_dir, args.gts_path), 'w') as gts_file:
-        json.dump(gts, gts_file)"""
+        json.dump(gts, gts_file)
 
 
 if __name__ == '__main__':

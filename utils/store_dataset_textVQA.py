@@ -47,7 +47,7 @@ def save_dataset(image_dir, questions, OCR, vocab,output,
     print ("Number of images to be written: %d" % total_images)
     print ("Number of QAs to be written: %d" % total_questions)
 
-    total_questions = 698#5043
+    total_questions = 5043#698#5043
     h5file = h5py.File(output, "w")
     d_questions = h5file.create_dataset(
         "questions", (total_questions + 1, max_q_length), dtype='i')
