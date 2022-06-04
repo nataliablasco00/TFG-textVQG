@@ -105,17 +105,19 @@ def save_dataset(image_dir, questions, annotations, vocab,output,
 
         #process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"]]
         process_ocr_pos = [x["bbox"] for x in entry["ans_bboxes"] if x["text"] in entry["answer"] ]
+        if len(process_ocr_pos) == 0:
+            d_ocr_positions[q_index, :4] = [0, 0, 0, 0]
+        else:
+            v0, v1, v2, v3 = float('inf'), float('inf'), 0, 0
+            for x in process_ocr_pos:
+                v0 = min(v0, x[0])
+                v1 = min(v1, x[1])
+                v2 = max(v2, x[2])
+                v3 = max(v3, x[3])
 
-        v0, v1, v2, v3 = float('inf'), float('inf'), 0, 0
-        for x in process_ocr_pos:
-            v0 = min(v0, x[0])
-            v1 = min(v1, x[1])
-            v2 = max(v2, x[2])
-            v3 = max(v3, x[3])
-
-        # print(entry.get("ocr_position"))
-        s = img_shapes[image_id]
-        d_ocr_positions[q_index, :4] = [float(v0)/s[0], float(v1)/s[1], float(v2)/s[0], float(v3)/s[1]]
+            # print(entry.get("ocr_position"))
+            s = img_shapes[image_id]
+            d_ocr_positions[q_index, :4] = [float(v0)/s[0], float(v1)/s[1], float(v2)/s[0], float(v3)/s[1]]
 
         q, length = process_text(" ".join(entry['question']), vocab,
                                  max_length=max_q_length)
