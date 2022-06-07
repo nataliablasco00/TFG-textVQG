@@ -96,15 +96,15 @@ class textVQG(nn.Module):
         vocab_size,
         sos_id,
         sos_id,
-        embed_size=1088,
-        num_layers=4,
+        embed_size=512*3,#1088
+        num_layers=2,
         forward_expansion=4,
         heads=4,
-        dropout=0.1,
+        dropout=0.01,
         device="cuda",
         max_length=20)
 
-        self.lineal = nn.Linear(4, 64)
+        self.lineal = nn.Linear(4, 512)
         self.relu = nn.ReLU()
    
         
