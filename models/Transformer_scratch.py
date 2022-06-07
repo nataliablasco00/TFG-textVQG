@@ -342,7 +342,6 @@ class Transformer(nn.Module):
 
         src = torch.transpose(src, 0, 1) # (N, 1, dim_embedding)
 
-
         trg_mask = self.make_trg_mask(trg)
 
         #print(" trg -->", trg)
